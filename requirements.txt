@@ -9,7 +9,7 @@ rapidocr_onnxruntime>=1.3
 opencv-python-headless>=4.9
 scikit-learn>=1.4   # line edit detector
 joblib>=1.3
-torch>=2.3          # CPU build is enough for the server
 
-# training only - a CUDA build of torch is much faster:
+# training only (and the optional pixel CNN) - a CUDA build of torch is much faster:
+#   pip install torch
 #   pip install torch --index-url https://download.pytorch.org/whl/cu128
