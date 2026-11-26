@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AlertTriangle, CircleCheck, FileSearch, Lock, MonitorSmartphone, RotateCcw, ScanLine } from 'lucide-react'
+import { AlertTriangle, CircleCheck, FileSearch, History, Lock, MonitorSmartphone, Printer, RotateCcw, ScanLine, Trash2 } from 'lucide-react'
 import { checkHealth, checkImage, checkLink } from './api.js'
 import { checkImageLocal } from './local/image.js'
 import { checkLinkLocal } from './local/links.js'
@@ -7,6 +7,8 @@ import ImageInput from './components/ImageInput.jsx'
 import { validateImage } from './validate.js'
 import LinkInput from './components/LinkInput.jsx'
 import Result from './components/Result.jsx'
+import { SAMPLE_LINKS, sampleReceipt } from './samples.js'
+import { addEntry, loadHistory, saveHistory, timeAgo } from './history.js'
 
 const LOOKS_LIKE_LINK = /^(https?:\/\/|upi:\/\/|www\.)\S+/i
 
@@ -23,6 +25,9 @@ export default function App() {
   // null while we find out; false means no server, so checks run in the browser
   const [online, setOnline] = useState(null)
   const [progress, setProgress] = useState('')
+  const [history, setHistory] = useState(loadHistory)
+
+  useEffect(() => saveHistory(history), [history])
 
   useEffect(() => {
     checkHealth().then(setOnline)
@@ -30,7 +35,7 @@ export default function App() {
 
   useEffect(() => () => previewUrl && URL.revokeObjectURL(previewUrl), [previewUrl])
 
-  const run = useCallback(async (task) => {
+  const run = useCallback(async (task, label) => {
     const id = ++runId.current
     setStatus('loading')
     setError('')
@@ -40,6 +45,16 @@ export default function App() {
       const data = await task()
       if (id !== runId.current) return
       setResult(data)
+      setHistory((h) =>
+        addEntry(h, {
+          at: Date.now(),
+          kind: data.kind,
+          label,
+          verdict: data.verdict,
+          verdictLabel: data.verdict_label,
+          pct: data.fake_percent,
+        }),
+      )
       setStatus('done')
     } catch (err) {
       if (id !== runId.current) return
@@ -59,7 +74,7 @@ export default function App() {
       }
       setFile(f)
       setPreviewUrl(URL.createObjectURL(f))
-      run(() => (online === false ? checkImageLocal(f, setProgress) : checkImage(f)))
+      run(() => (online === false ? checkImageLocal(f, setProgress) : checkImage(f)), f.name)
     },
     [run, online],
   )
@@ -68,7 +83,7 @@ export default function App() {
     (text) => {
       setMode('link')
       setLink(text)
-      run(async () => (online === false ? checkLinkLocal(text) : checkLink(text)))
+      run(async () => (online === false ? checkLinkLocal(text) : checkLink(text)), text)
     },
     [run, online],
   )
@@ -142,7 +157,7 @@ export default function App() {
               <p className="brand-sub">Fake payment receipt detection</p>
             </div>
           </div>
-          <p className="project-tag">College project</p>
+          <ServerStatus online={online} />
         </div>
       </header>
 
@@ -156,59 +171,78 @@ export default function App() {
         </div>
 
         <div className="workspace">
-          <section className="card tool" aria-labelledby="tool-title">
-            {online === false && (
-              <div className="offline" role="status">
-                <MonitorSmartphone size={18} aria-hidden="true" />
-                <p>
-                  Running in your browser. Your screenshot never leaves your device. This version checks the text and
-                  numbers; the pixel-edit check needs the full server.
-                </p>
+          <div className="side">
+            <section className="card tool" aria-labelledby="tool-title">
+              {online === false && (
+                <div className="offline" role="status">
+                  <MonitorSmartphone size={18} aria-hidden="true" />
+                  <p>
+                    Running in your browser. Your screenshot never leaves your device. This version checks the text and
+                    numbers; the pixel-edit check needs the full server.
+                  </p>
+                </div>
+              )}
+              <h2 id="tool-title" className="card-title">
+                Input
+              </h2>
+
+              <div className="switch" role="tablist" aria-label="What do you want to check?">
+                {[
+                  ['image', 'Screenshot'],
+                  ['link', 'Link'],
+                ].map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    aria-selected={mode === id}
+                    className="switch-btn"
+                    onClick={() => switchMode(id)}
+                  >
+                    {label}
+                  </button>
+                ))}
+                <span className={`switch-thumb${mode === 'link' ? ' is-right' : ''}`} aria-hidden="true" />
               </div>
-            )}
-            <h2 id="tool-title" className="card-title">
-              Input
-            </h2>
 
-            <div className="switch" role="tablist" aria-label="What do you want to check?">
-              {[
-                ['image', 'Screenshot'],
-                ['link', 'Link'],
-              ].map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  role="tab"
-                  aria-selected={mode === id}
-                  className="switch-btn"
-                  onClick={() => switchMode(id)}
-                >
-                  {label}
-                </button>
-              ))}
-              <span className={`switch-thumb${mode === 'link' ? ' is-right' : ''}`} aria-hidden="true" />
-            </div>
+              {mode === 'image' ? (
+                <ImageInput
+                  file={file}
+                  previewUrl={previewUrl}
+                  busy={busy}
+                  onFile={onFile}
+                  onClear={clear}
+                  onRetry={() => file && run(() => (online === false ? checkImageLocal(file, setProgress) : checkImage(file)), file.name)}
+                />
+              ) : (
+                <LinkInput value={link} busy={busy} onChange={setLink} onSubmit={onLink} />
+              )}
 
-            {mode === 'image' ? (
-              <ImageInput
-                file={file}
-                previewUrl={previewUrl}
+              <Samples
+                mode={mode}
                 busy={busy}
-                onFile={onFile}
-                onClear={clear}
-                onRetry={() => file && run(() => (online === false ? checkImageLocal(file, setProgress) : checkImage(file)))}
+                hidden={mode === 'image' && !!file}
+                onImage={async (kind) => onFile(await sampleReceipt(kind))}
+                onLink={onLink}
               />
-            ) : (
-              <LinkInput value={link} busy={busy} onChange={setLink} onSubmit={onLink} />
-            )}
 
-            <p className="privacy">
-              <Lock size={14} aria-hidden="true" />
-              {online === false
-                ? 'Nothing is uploaded or stored. Nothing is sent to your bank or the payer.'
-                : 'Checked on the server and not stored. Nothing is sent to your bank or the payer.'}
-            </p>
-          </section>
+              <p className="privacy">
+                <Lock size={14} aria-hidden="true" />
+                {online === false
+                  ? 'Nothing is uploaded or stored. Nothing is sent to your bank or the payer.'
+                  : 'Checked on the server and not stored. Nothing is sent to your bank or the payer.'}
+              </p>
+            </section>
+
+            {history.length > 0 && (
+              <RecentChecks
+                items={history}
+                busy={busy}
+                onLink={onLink}
+                onClear={() => setHistory([])}
+              />
+            )}
+          </div>
 
           <section
             className="card output"
@@ -222,10 +256,18 @@ export default function App() {
                 Result
               </h2>
               {(status === 'done' || status === 'error') && (
-                <button type="button" className="btn btn-secondary" onClick={checkAnother}>
-                  <RotateCcw size={16} aria-hidden="true" />
-                  Check another
-                </button>
+                <div className="output-actions">
+                  {status === 'done' && (
+                    <button type="button" className="btn btn-secondary" onClick={() => window.print()}>
+                      <Printer size={16} aria-hidden="true" />
+                      Save report
+                    </button>
+                  )}
+                  <button type="button" className="btn btn-secondary" onClick={checkAnother}>
+                    <RotateCcw size={16} aria-hidden="true" />
+                    Check another
+                  </button>
+                </div>
               )}
             </div>
             {status === 'idle' && <Idle mode={mode} />}
@@ -235,14 +277,99 @@ export default function App() {
           </section>
         </div>
       </main>
-
-      <footer className="foot">
-        <div className="wrap foot-inner">
-          <p>Academic project, built for study purposes. Not affiliated with NPCI, any bank or any UPI app.</p>
-          <p>The result is an estimate. The only proof of payment is the money in your own account.</p>
-        </div>
-      </footer>
     </div>
+  )
+}
+
+function ServerStatus({ online }) {
+  const [label, tone, title] =
+    online === null
+      ? ['Connecting', 'wait', 'Looking for the checking server']
+      : online
+        ? ['Server online', 'on', 'Full checks, including the pixel-edit detector']
+        : ['Browser mode', 'off', 'No server reached. Text and number checks run in your browser.']
+  return (
+    <p className={`status status-${tone}`} title={title} role="status">
+      <span className="status-dot" aria-hidden="true" />
+      {label}
+    </p>
+  )
+}
+
+function Samples({ mode, busy, hidden, onImage, onLink }) {
+  if (hidden) return null
+  return (
+    <div className="samples">
+      <p className="samples-label">{mode === 'image' ? 'No screenshot handy? Try a sample' : 'Try a sample link'}</p>
+      <div className="samples-row">
+        {mode === 'image' ? (
+          <>
+            <button type="button" className="chip" disabled={busy} onClick={() => onImage('genuine')}>
+              <span className="chip-dot chip-good" aria-hidden="true" />
+              Genuine receipt
+            </button>
+            <button type="button" className="chip" disabled={busy} onClick={() => onImage('edited')}>
+              <span className="chip-dot chip-bad" aria-hidden="true" />
+              Edited receipt
+            </button>
+          </>
+        ) : (
+          SAMPLE_LINKS.map(([name, url]) => (
+            <button key={name} type="button" className="chip" disabled={busy} onClick={() => onLink(url)}>
+              <span className="chip-dot chip-bad" aria-hidden="true" />
+              {name}
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
+
+const VERDICT_TONE = { genuine: 'good', unsure: 'warn', fake: 'bad', not_receipt: 'neutral' }
+
+function RecentChecks({ items, busy, onLink, onClear }) {
+  return (
+    <section className="card recent" aria-labelledby="recent-title">
+      <div className="recent-head">
+        <h2 id="recent-title" className="card-title">
+          <History size={14} aria-hidden="true" />
+          Recent checks
+        </h2>
+        <button type="button" className="icon-btn" onClick={onClear} aria-label="Clear recent checks" title="Clear">
+          <Trash2 size={16} aria-hidden="true" />
+        </button>
+      </div>
+      <ul className="recent-list">
+        {items.map((it) => {
+          const body = (
+            <>
+              <span className={`recent-pct tone-${VERDICT_TONE[it.verdict] || 'neutral'}`}>
+                {it.pct != null ? `${Math.round(it.pct)}%` : '–'}
+              </span>
+              <span className="recent-main">
+                <span className="recent-label">{it.label}</span>
+                <span className="recent-meta">
+                  {it.verdictLabel} · {timeAgo(it.at)}
+                </span>
+              </span>
+            </>
+          )
+          return (
+            <li key={it.at}>
+              {it.kind === 'link' ? (
+                <button type="button" className="recent-item" disabled={busy} onClick={() => onLink(it.label)} title="Check this link again">
+                  {body}
+                </button>
+              ) : (
+                <div className="recent-item">{body}</div>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+      <p className="recent-note">Saved in this browser only. Screenshots aren&rsquo;t kept.</p>
+    </section>
   )
 }
 
