@@ -1,0 +1,51 @@
+{
+  "note": "Synthetic test split rendered from unseen seeds. Real-world accuracy is not measured by this.",
+  "threshold": 0.865,
+  "line_auc_val": 0.9394,
+  "line_auc_test": 0.9204,
+  "image_auc_val": 0.8113,
+  "image_auc_test": 0.7751,
+  "test_accuracy": 0.715,
+  "fakes_caught": 0.4925,
+  "genuine_false_alarms": 0.0625,
+  "detection_by_edit_type": {
+    "copymove": 0.212,
+    "digit": 0.163,
+    "retype": 0.626,
+    "splice": 0.736
+  },
+  "accuracy_by_format": {
+    ".jpg_fake": 0.477,
+    ".jpg_genuine": 0.925,
+    ".png_fake": 0.522,
+    ".png_genuine": 0.967
+  },
+  "features": [
+    "bg_shift",
+    "bg_noise_ratio",
+    "ring_noise",
+    "seam_v",
+    "seam_h",
+    "ela_text",
+    "ela_bg",
+    "ela_ring",
+    "block_in",
+    "block_ring",
+    "aa_ratio",
+    "ink_contrast",
+    "height",
+    "width_rel",
+    "y_rel",
+    "ela_text_z",
+    "aa_z",
+    "contrast_z",
+    "color_nearest",
+    "align_dist",
+    "noise_z",
+    "block_z",
+    "bg_shift_z",
+    "n_lines",
+    "global_ela",
+    "global_noise"
+  ]
+}

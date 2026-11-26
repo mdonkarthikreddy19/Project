@@ -1,0 +1,6 @@
+{
+  "note": "Experimental pixel-map CNN. Disabled in the backend: it needs a held-out AUC of at least 0.7.",
+  "best_val_auc": 0.6583,
+  "best_epoch": 10,
+  "enabled_in_backend": false
+}

@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.venv*/
+data/
+frontend/node_modules/
+frontend/dist/
+.impeccable/review/
+.impeccable/mocks/
+*.log
+.playwright-cli/
+models/*.pt
+.claude/
+.impeccable/
+PRODUCT.md
+DESIGN.md
+*.joblib.tmp

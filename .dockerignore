@@ -1,0 +1,7 @@
+data/
+.venv*/
+frontend/node_modules/
+frontend/dist/
+.claude/
+.impeccable/
+**/__pycache__/

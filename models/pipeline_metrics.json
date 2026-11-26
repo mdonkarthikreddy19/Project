@@ -1,0 +1,26 @@
+{
+  "note": "Full website pipeline on the synthetic test split. Real-world accuracy is not measured by this.",
+  "images": 100,
+  "genuine_verdicts": {
+    "genuine": 0.76,
+    "unsure": 0.12,
+    "fake": 0.12
+  },
+  "fake_verdicts": {
+    "genuine": 0.58,
+    "fake": 0.26,
+    "unsure": 0.16
+  },
+  "fakes_called_fake": 0.26,
+  "fakes_called_fake_or_unsure": 0.42,
+  "genuine_called_fake": 0.12,
+  "genuine_called_genuine": 0.76,
+  "median_percent_genuine": 16.0,
+  "median_percent_fake": 28.55,
+  "fake_verdict_rate_by_edit_type": {
+    "copymove": 0.25,
+    "digit": 0.222,
+    "retype": 0.231,
+    "splice": 0.429
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "images": 60,
+  "recognised_as_receipt": 1.0,
+  "genuine_amount_read": 1.0,
+  "genuine_utr_read": 1.0,
+  "genuine_date_read": 1.0,
+  "genuine_with_red_flag": 0.0,
+  "fake_with_red_flag": 0.3333333333333333,
+  "red_flags_on_genuine": {},
+  "red_flags_on_fake": {
+    "utr_day": 5,
+    "future": 1,
+    "utr_mismatch": 1,
+    "amount_conflict": 3,
+    "no_utr": 1
+  }
+}
