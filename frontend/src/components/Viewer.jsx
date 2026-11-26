@@ -37,7 +37,7 @@ export default function Viewer({ previewUrl, views = {}, regions = [], modelLoad
 
   return (
     <section className="viewer" aria-label="Screenshot views">
-      <h3 className="section-title">Look for yourself</h3>
+      <h4 className="section-title">Look for yourself</h4>
       <div className="tabs" role="tablist" aria-label="Choose a view" onKeyDown={onKey}>
         {available.map((t) => (
           <button

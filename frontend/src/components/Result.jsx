@@ -53,29 +53,35 @@ export default function Result({ result, previewUrl }) {
   const details = { ...(result.details || {}) }
   if (details.app === 'Unknown') delete details.app
 
+  const image = result.kind === 'image'
+
   return (
-    <div className="result">
-      <section className={`verdict tone-${v.tone}`} aria-labelledby="verdict-title">
-        <div className="verdict-head">
-          <v.Icon className="verdict-icon" size={28} strokeWidth={2} aria-hidden="true" />
-          <h2 id="verdict-title" className="verdict-title">{result.verdict_label}</h2>
+    <div className={`result${image ? ' has-side' : ''}`}>
+      <div className="result-main">
+        <section className={`verdict tone-${v.tone}`} aria-labelledby="verdict-title">
+          <div className="verdict-head">
+            <v.Icon className="verdict-icon" size={28} strokeWidth={2} aria-hidden="true" />
+            <h3 id="verdict-title" className="verdict-title">{result.verdict_label}</h3>
+          </div>
+          {pct != null && <Score pct={pct} />}
+          <p className="verdict-line">{v.line}</p>
+          <NextStep result={result} details={details} />
+        </section>
+
+        {bad.length > 0 && <FindingList title={result.verdict === 'not_receipt' ? 'Also noticed' : 'What looks wrong'} items={bad} />}
+        {good.length > 0 && <FindingList title="What checks out" items={good} />}
+        {notes.length > 0 && <FindingList title="Notes" items={notes} />}
+
+        <DetailTable details={details} redirects={details.redirects} flagged={flaggedRows(result)} receipt={image && result.is_receipt} />
+
+        {image && result.file && <FileLine file={result.file} seconds={result.seconds} model={result.model_loaded} />}
+      </div>
+
+      {image && (
+        <div className="result-side">
+          <Viewer previewUrl={previewUrl} views={result.views} regions={result.regions} modelLoaded={result.model_loaded} isReceipt={result.is_receipt} local={!!result.local} />
         </div>
-        {pct != null && <Score pct={pct} />}
-        <p className="verdict-line">{v.line}</p>
-        <NextStep result={result} details={details} />
-      </section>
-
-      {bad.length > 0 && <FindingList title={result.verdict === 'not_receipt' ? 'Also noticed' : 'What looks wrong'} items={bad} />}
-      {good.length > 0 && <FindingList title="What checks out" items={good} />}
-      {notes.length > 0 && <FindingList title="Notes" items={notes} />}
-
-      {result.kind === 'image' && (
-        <Viewer previewUrl={previewUrl} views={result.views} regions={result.regions} modelLoaded={result.model_loaded} isReceipt={result.is_receipt} local={!!result.local} />
       )}
-
-      <DetailTable details={details} redirects={details.redirects} flagged={flaggedRows(result)} receipt={result.kind === 'image' && result.is_receipt} />
-
-      {result.kind === 'image' && result.file && <FileLine file={result.file} seconds={result.seconds} model={result.model_loaded} />}
     </div>
   )
 }
@@ -83,13 +89,21 @@ export default function Result({ result, previewUrl }) {
 function Score({ pct }) {
   const [shown, setShown] = useState(0)
   useEffect(() => {
-    const id = requestAnimationFrame(() => setShown(pct))
-    return () => cancelAnimationFrame(id)
+    const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1100
+    let frame
+    const start = performance.now()
+    const tick = (now) => {
+      const t = duration ? Math.min(1, (now - start) / duration) : 1
+      setShown(pct * (1 - Math.pow(1 - t, 3)))
+      if (t < 1) frame = requestAnimationFrame(tick)
+    }
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
   }, [pct])
   return (
     <div className="score">
       <p className="score-number">
-        <span className="score-value">{Math.round(pct)}%</span>
+        <span className="score-value">{Math.round(shown)}%</span>
         <span className="score-label">chance it&rsquo;s fake</span>
       </p>
       <div
@@ -146,7 +160,7 @@ function flaggedRows(result) {
 function FindingList({ title, items }) {
   return (
     <section className="findings" aria-label={title}>
-      <h3 className="section-title">{title}</h3>
+      <h4 className="section-title">{title}</h4>
       <ul>
         {items.map((f) => (
           <li key={f.code} className={`finding finding-${f.kind}`}>
@@ -169,7 +183,7 @@ function DetailTable({ details, redirects, flagged, receipt }) {
   if (!rows.length) return null
   return (
     <section aria-label="What we read">
-      <h3 className="section-title">What we read</h3>
+      <h4 className="section-title">What we read</h4>
       <dl className="details">
         {rows.map(([k, label]) => (
           <div className={`details-row${flagged.has(k) ? ' is-flagged' : ''}`} key={k}>
