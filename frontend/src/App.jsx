@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AlertTriangle, CalendarClock, FileSearch, Globe, Hash, ScanLine } from 'lucide-react'
-import { checkImage, checkLink } from './api.js'
+import { AlertTriangle, CalendarClock, FileSearch, Globe, Hash, ScanLine, WifiOff } from 'lucide-react'
+import { checkHealth, checkImage, checkLink } from './api.js'
 import ImageInput from './components/ImageInput.jsx'
 import { validateImage } from './validate.js'
 import LinkInput from './components/LinkInput.jsx'
@@ -18,6 +18,11 @@ export default function App() {
   const [error, setError] = useState('')
   const resultRef = useRef(null)
   const runId = useRef(0)
+  const [online, setOnline] = useState(true)
+
+  useEffect(() => {
+    checkHealth().then(setOnline)
+  }, [])
 
   useEffect(() => () => previewUrl && URL.revokeObjectURL(previewUrl), [previewUrl])
 
@@ -116,7 +121,7 @@ export default function App() {
       <header className="top">
         <div className="top-inner">
           <span className="logo-mark" aria-hidden="true">
-            <ScanLine size={18} strokeWidth={2.2} />
+            <ScanLine size={18} strokeWidth={2} />
           </span>
           <span className="top-name">Payment receipt checker</span>
         </div>
@@ -124,6 +129,14 @@ export default function App() {
 
       <main className="layout">
         <section className="panel input-panel" aria-labelledby="page-title">
+          {!online && (
+            <div className="offline" role="status">
+              <WifiOff size={18} aria-hidden="true" />
+              <p>
+                The checker isn&rsquo;t reachable right now, so checks will fail. Try again in a few minutes.
+              </p>
+            </div>
+          )}
           <h1 id="page-title">Is this payment real?</h1>
           <p className="lede">
             Upload a UPI or bank payment screenshot, or paste the link you were sent. You&rsquo;ll see how likely it
@@ -213,7 +226,7 @@ function ErrorState({ message }) {
 }
 
 const IMAGE_CHECKS = [
-  [Hash, 'Numbers that must agree', 'A real UTR carries the payment date inside it. So do PhonePe transaction IDs. We check them against the printed date.'],
+  [Hash, 'Numbers that must agree', 'PhonePe transaction IDs carry the exact payment time, and every UTR has 12 digits. We check them against what\u2019s printed.'],
   [CalendarClock, 'Dates and amounts', 'Impossible dates, wrong weekdays, future dates and an amount printed twice with different values.'],
   [ScanLine, 'Edited pixels', 'A model trained on edited receipts marks areas where text was retyped or pasted in.'],
   [FileSearch, 'File traces', 'Photo-editor names left in the file, and screenshots older than the payment they show.'],

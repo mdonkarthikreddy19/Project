@@ -53,7 +53,7 @@ export default function ImageInput({ file, previewUrl, busy, onFile, onClear, on
       onDragLeave={() => setDragging(false)}
       onDrop={onDrop}
     >
-      <ImageUp className="dropzone-icon" size={32} strokeWidth={1.6} aria-hidden="true" />
+      <ImageUp className="dropzone-icon" size={32} strokeWidth={2} aria-hidden="true" />
       <p className="dropzone-title">Add the payment screenshot</p>
       <p className="muted small">Google Pay, PhonePe, Paytm, BHIM or a bank transfer receipt</p>
       <button type="button" className="btn btn-primary btn-wide" onClick={pick} disabled={busy}>

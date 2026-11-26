@@ -42,3 +42,12 @@ export function checkLink(url) {
     body: JSON.stringify({ url }),
   })
 }
+
+export async function checkHealth() {
+  try {
+    const res = await fetch(API_BASE + '/api/health', { signal: AbortSignal.timeout(8000) })
+    return res.ok
+  } catch {
+    return false
+  }
+}

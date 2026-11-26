@@ -70,7 +70,7 @@ export default function Result({ result, previewUrl }) {
       {notes.length > 0 && <FindingList title="Notes" items={notes} />}
 
       {result.kind === 'image' && (
-        <Viewer previewUrl={previewUrl} views={result.views} regions={result.regions} modelLoaded={result.model_loaded} />
+        <Viewer previewUrl={previewUrl} views={result.views} regions={result.regions} modelLoaded={result.model_loaded} isReceipt={result.is_receipt} />
       )}
 
       <DetailTable details={details} redirects={details.redirects} flagged={flaggedRows(result)} receipt={result.kind === 'image' && result.is_receipt} />
