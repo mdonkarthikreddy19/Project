@@ -6,7 +6,7 @@ const TABS = [
   { id: 'ela', label: 'Error levels', help: 'Re-saving reveals compression differences. Edited text often glows brighter than the text around it.' },
 ]
 
-export default function Viewer({ previewUrl, views = {}, regions = [], modelLoaded = true, isReceipt = true }) {
+export default function Viewer({ previewUrl, views = {}, regions = [], modelLoaded = true, isReceipt = true, local = false }) {
   const [tab, setTab] = useState('original')
   const frameRef = useRef(null)
   const available = TABS.filter((t) => t.id === 'original' ? previewUrl : views[t.id])
@@ -61,6 +61,10 @@ export default function Viewer({ previewUrl, views = {}, regions = [], modelLoad
             ? current.help
             : !isReceipt
               ? 'No payment details were found, so nothing in this image was checked for edits.'
+              : local
+                ? regions.length
+                  ? current.help
+                  : 'Nothing to outline. The pixel-edit check only runs on the full server.'
               : !modelLoaded
               ? 'The edit detector isn’t loaded on this server, so nothing was marked.'
               : regions.length

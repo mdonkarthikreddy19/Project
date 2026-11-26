@@ -358,10 +358,11 @@ function parseMisc(lines, out) {
     out.findings.push(finding('status_' + out.status.toLowerCase(), `Receipt itself says ${out.status.toLowerCase()}`,
       'This screen does not show a completed payment. Don’t release goods against it.', 1.8))
   }
-  const m = text.match(/([a-z0-9][a-z0-9.\-_]{1,})@([a-z]{2,})/)
+  // "@ptyes on Paytm" squashes to "@ptyesonpaytm": drop the "on <app>" tail
+  const m = text.match(/([a-z0-9][a-z0-9.\-_]{1,})@([a-z]{2,}?)(?:on(?:paytm|googlepay|phonepe|gpay|bhim))?(?![a-z])/)
   if (m && !['gmail', 'yahoo', 'outlook', 'hotmail', 'rediffmail'].includes(m[2])) {
-    out.vpa = m[0]
-    const ln = lines.find((l) => squash(l.text).includes(m[0]))
+    out.vpa = `${m[1]}@${m[2]}`
+    const ln = lines.find((l) => squash(l.text).includes(out.vpa))
     if (ln) out.boxes.vpa = ln.box
     if (!KNOWN_HANDLES.has(m[2]) && !['ok', 'pt', 'wa'].some((p) => m[2].startsWith(p))) {
       out.findings.push(finding('vpa_handle', 'Unfamiliar UPI handle',

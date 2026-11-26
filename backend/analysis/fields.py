@@ -452,13 +452,14 @@ def parse_misc(lines: list[Line], out: Parsed):
         out.findings.append(Finding("status_" + out.status.lower(), f"Receipt itself says {out.status.lower()}",
                                     "This screen does not show a completed payment. Don't release goods against it.", 1.8))
 
-    m = re.search(r"([a-z0-9][a-z0-9.\-_]{1,})@([a-z]{2,})", text)
+    # "@ptyes on Paytm" squashes to "@ptyesonpaytm": drop the "on <app>" tail
+    m = re.search(r"([a-z0-9][a-z0-9.\-_]{1,})@([a-z]{2,}?)(?:on(?:paytm|googlepay|phonepe|gpay|bhim))?(?![a-z])", text)
     if m:
         handle = m.group(2)
         if handle not in ("gmail", "yahoo", "outlook", "hotmail", "rediffmail"):
-            out.vpa = m.group(0)
+            out.vpa = f"{m.group(1)}@{m.group(2)}"
             for ln in lines:
-                if m.group(0) in ln.squashed:
+                if out.vpa in ln.squashed:
                     out.boxes["vpa"] = ln.box
                     break
             if handle not in KNOWN_HANDLES and not any(handle.startswith(h) for h in ("ok", "pt", "wa")):
