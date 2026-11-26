@@ -204,8 +204,8 @@ html {
   margin-bottom: 18px;
   padding: 12px 14px;
   border-radius: var(--radius-sm);
-  background: var(--warn-soft);
-  color: var(--warn);
+  background: var(--accent-soft);
+  color: var(--accent);
   font-size: 0.9375rem;
 }
 

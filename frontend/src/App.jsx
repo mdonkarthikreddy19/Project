@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AlertTriangle, CalendarClock, FileSearch, Globe, Hash, ScanLine, WifiOff } from 'lucide-react'
+import { AlertTriangle, CalendarClock, FileSearch, Globe, Hash, ScanLine, MonitorSmartphone } from 'lucide-react'
 import { checkHealth, checkImage, checkLink } from './api.js'
+import { checkImageLocal } from './local/image.js'
+import { checkLinkLocal } from './local/links.js'
 import ImageInput from './components/ImageInput.jsx'
 import { validateImage } from './validate.js'
 import LinkInput from './components/LinkInput.jsx'
@@ -18,7 +20,9 @@ export default function App() {
   const [error, setError] = useState('')
   const resultRef = useRef(null)
   const runId = useRef(0)
-  const [online, setOnline] = useState(true)
+  // null while we find out; false means no server, so checks run in the browser
+  const [online, setOnline] = useState(null)
+  const [progress, setProgress] = useState('')
 
   useEffect(() => {
     checkHealth().then(setOnline)
@@ -54,18 +58,18 @@ export default function App() {
       }
       setFile(f)
       setPreviewUrl(URL.createObjectURL(f))
-      run(() => checkImage(f))
+      run(() => (online === false ? checkImageLocal(f, setProgress) : checkImage(f)))
     },
-    [run],
+    [run, online],
   )
 
   const onLink = useCallback(
     (text) => {
       setMode('link')
       setLink(text)
-      run(() => checkLink(text))
+      run(async () => (online === false ? checkLinkLocal(text) : checkLink(text)))
     },
-    [run],
+    [run, online],
   )
 
   // Paste anywhere: an image goes to the screenshot check, a link to the link check.
@@ -129,11 +133,12 @@ export default function App() {
 
       <main className="layout">
         <section className="panel input-panel" aria-labelledby="page-title">
-          {!online && (
+          {online === false && (
             <div className="offline" role="status">
-              <WifiOff size={18} aria-hidden="true" />
+              <MonitorSmartphone size={18} aria-hidden="true" />
               <p>
-                The checker isn&rsquo;t reachable right now, so checks will fail. Try again in a few minutes.
+                Checks run right here in your browser. Your screenshot never leaves your device. This version checks
+                the text and numbers; the pixel-edit check needs the full server.
               </p>
             </div>
           )}
@@ -168,19 +173,21 @@ export default function App() {
               busy={busy}
               onFile={onFile}
               onClear={clear}
-              onRetry={() => file && run(() => checkImage(file))}
+              onRetry={() => file && run(() => (online === false ? checkImageLocal(file, setProgress) : checkImage(file)))}
             />
           ) : (
             <LinkInput value={link} busy={busy} onChange={setLink} onSubmit={onLink} />
           )}
 
           <p className="privacy muted small">
-            Checked on this server and not stored. Nothing is sent to your bank or the payer.
+            {online === false
+              ? 'Nothing is uploaded or stored. Nothing is sent to your bank or the payer.'
+              : 'Checked on this server and not stored. Nothing is sent to your bank or the payer.'}
           </p>
         </section>
 
         <section className="panel result-panel" ref={resultRef} aria-live="polite" aria-busy={busy}>
-          {busy && <Loading mode={mode} />}
+          {busy && <Loading mode={mode} progress={online === false ? progress : ''} />}
           {status === 'error' && <ErrorState message={error} />}
           {status === 'done' && showingResult && <Result result={result} previewUrl={previewUrl} />}
           {status === 'idle' && <Idle mode={mode} />}
@@ -197,7 +204,7 @@ export default function App() {
   )
 }
 
-function Loading({ mode }) {
+function Loading({ mode, progress }) {
   return (
     <div className="loading">
       <div className="loading-bar" aria-hidden="true">
@@ -206,7 +213,7 @@ function Loading({ mode }) {
       <p className="loading-title">{mode === 'image' ? 'Checking the screenshot…' : 'Checking the link…'}</p>
       <p className="muted small">
         {mode === 'image'
-          ? 'Reading the text and looking at the pixels. This usually takes 5 to 15 seconds.'
+          ? progress || 'Reading the text and looking at the pixels. This usually takes 5 to 15 seconds.'
           : 'Following the link to see where it really goes. This takes a few seconds.'}
       </p>
     </div>
