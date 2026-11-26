@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AlertTriangle, ArrowUp, Lock, MonitorSmartphone, RotateCcw, ScanLine, Smartphone, Wallet } from 'lucide-react'
+import { AlertTriangle, CircleCheck, FileSearch, Lock, MonitorSmartphone, RotateCcw, ScanLine } from 'lucide-react'
 import { checkHealth, checkImage, checkLink } from './api.js'
 import { checkImageLocal } from './local/image.js'
 import { checkLinkLocal } from './local/links.js'
@@ -7,25 +7,8 @@ import ImageInput from './components/ImageInput.jsx'
 import { validateImage } from './validate.js'
 import LinkInput from './components/LinkInput.jsx'
 import Result from './components/Result.jsx'
-import { PageProgress, Reveal } from './motion.jsx'
-import { useActiveSection } from './hooks.js'
-import HowItWorks from './sections/HowItWorks.jsx'
-import Checks from './sections/Checks.jsx'
-import SpotFake from './sections/SpotFake.jsx'
-import ScoreGuide from './sections/ScoreGuide.jsx'
-import About from './sections/About.jsx'
-import Faq from './sections/Faq.jsx'
 
 const LOOKS_LIKE_LINK = /^(https?:\/\/|upi:\/\/|www\.)\S+/i
-
-const NAV = [
-  ['how', 'How it works'],
-  ['checks', 'What we check'],
-  ['spot', 'Spot a fake'],
-  ['about', 'About'],
-]
-// every top-level section, so the highlight clears over ones that aren't in the nav
-const SECTION_IDS = ['check', 'result', 'how', 'checks', 'spot', 'score', 'about', 'faq']
 
 export default function App() {
   const [mode, setMode] = useState('image')
@@ -40,9 +23,6 @@ export default function App() {
   // null while we find out; false means no server, so checks run in the browser
   const [online, setOnline] = useState(null)
   const [progress, setProgress] = useState('')
-  const [active, setActive] = useState('')
-
-  useActiveSection(SECTION_IDS, setActive)
 
   useEffect(() => {
     checkHealth().then(setOnline)
@@ -114,9 +94,9 @@ export default function App() {
     return () => window.removeEventListener('paste', onPaste)
   }, [onFile, onLink])
 
-  // The result opens below the checker; bring it into view as soon as a check starts.
+  // On narrow screens the result sits under the form, so bring it into view.
   useEffect(() => {
-    if (status === 'idle') return
+    if (status === 'idle' || !window.matchMedia('(max-width: 959px)').matches) return
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     resultRef.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
   }, [status])
@@ -141,7 +121,7 @@ export default function App() {
 
   const checkAnother = () => {
     clear()
-    document.getElementById('check')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const busy = status === 'loading'
@@ -149,190 +129,147 @@ export default function App() {
 
   return (
     <div className="page">
-      <a href="#check" className="skip-link">
-        Skip to the checker
-      </a>
-
-      <header className="nav">
-        <div className="nav-inner">
-          <a href="#top" className="brand" aria-label="Receipt checker, back to top">
+      <header className="top">
+        <div className="wrap top-inner">
+          <div className="brand">
             <span className="brand-mark" aria-hidden="true">
               <ScanLine size={18} strokeWidth={2} />
             </span>
-            <span className="brand-name">
-              Receipt<span>check</span>
-            </span>
-          </a>
-          <nav aria-label="Sections">
-            <ul className="nav-links">
-              {NAV.map(([id, label]) => (
-                <li key={id}>
-                  <a href={`#${id}`} className={active === id ? 'is-active' : undefined} aria-current={active === id ? 'true' : undefined}>
-                    {label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
-          <a href="#check" className="btn btn-primary btn-small nav-cta">
-            Check a receipt
-          </a>
+            <div>
+              <p className="brand-name">
+                Receipt<span>check</span>
+              </p>
+              <p className="brand-sub">Fake payment receipt detection</p>
+            </div>
+          </div>
+          <p className="project-tag">College project</p>
         </div>
-        <PageProgress />
       </header>
 
-      <main id="top">
-        <section id="check" className="hero" aria-labelledby="page-title">
-          <div className="wrap hero-grid">
-            <div className="hero-copy">
-              <Reveal as="p" className="tag">
-                <span className="tag-dot" aria-hidden="true" />
-                Student project · UPI receipt checker
-              </Reveal>
-              <Reveal as="h1" id="page-title" delay={1}>
-                Got paid with a screenshot? <em>Check it</em> before you hand anything over.
-              </Reveal>
-              <Reveal as="p" className="hero-lede" delay={2}>
-                Upload a UPI or bank payment screenshot, or paste the link you were sent. You&rsquo;ll see how likely
-                it is to be fake, and exactly why.
-              </Reveal>
-              <Reveal as="ul" className="hero-points" delay={3}>
-                <li>
-                  <Smartphone size={18} aria-hidden="true" />
-                  Google Pay, PhonePe, Paytm, BHIM and bank receipts
-                </li>
-                <li>
-                  <Lock size={18} aria-hidden="true" />
-                  Nothing is stored or sent to anyone
-                </li>
-                <li>
-                  <Wallet size={18} aria-hidden="true" />
-                  Free to use, no sign-up
-                </li>
-              </Reveal>
+      <main className="wrap main">
+        <div className="intro">
+          <h1>Check a payment screenshot</h1>
+          <p className="intro-lede">
+            Upload a UPI or bank payment screenshot, or paste the link you were sent. The checker reads the receipt,
+            cross-checks its details and gives the chance that it&rsquo;s fake, with the reasons.
+          </p>
+        </div>
+
+        <div className="workspace">
+          <section className="card tool" aria-labelledby="tool-title">
+            {online === false && (
+              <div className="offline" role="status">
+                <MonitorSmartphone size={18} aria-hidden="true" />
+                <p>
+                  Running in your browser. Your screenshot never leaves your device. This version checks the text and
+                  numbers; the pixel-edit check needs the full server.
+                </p>
+              </div>
+            )}
+            <h2 id="tool-title" className="card-title">
+              Input
+            </h2>
+
+            <div className="switch" role="tablist" aria-label="What do you want to check?">
+              {[
+                ['image', 'Screenshot'],
+                ['link', 'Link'],
+              ].map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === id}
+                  className="switch-btn"
+                  onClick={() => switchMode(id)}
+                >
+                  {label}
+                </button>
+              ))}
+              <span className={`switch-thumb${mode === 'link' ? ' is-right' : ''}`} aria-hidden="true" />
             </div>
 
-            <Reveal className="tool" delay={2}>
-              {online === false && (
-                <div className="offline" role="status">
-                  <MonitorSmartphone size={18} aria-hidden="true" />
-                  <p>
-                    Running in your browser. Your screenshot never leaves your device. This version checks the text
-                    and numbers; the pixel-edit check needs the full server.
-                  </p>
-                </div>
+            {mode === 'image' ? (
+              <ImageInput
+                file={file}
+                previewUrl={previewUrl}
+                busy={busy}
+                onFile={onFile}
+                onClear={clear}
+                onRetry={() => file && run(() => (online === false ? checkImageLocal(file, setProgress) : checkImage(file)))}
+              />
+            ) : (
+              <LinkInput value={link} busy={busy} onChange={setLink} onSubmit={onLink} />
+            )}
+
+            <p className="privacy">
+              <Lock size={14} aria-hidden="true" />
+              {online === false
+                ? 'Nothing is uploaded or stored. Nothing is sent to your bank or the payer.'
+                : 'Checked on the server and not stored. Nothing is sent to your bank or the payer.'}
+            </p>
+          </section>
+
+          <section
+            className="card output"
+            ref={resultRef}
+            aria-live="polite"
+            aria-busy={busy}
+            aria-labelledby="output-title"
+          >
+            <div className="output-head">
+              <h2 id="output-title" className="card-title">
+                Result
+              </h2>
+              {(status === 'done' || status === 'error') && (
+                <button type="button" className="btn btn-secondary" onClick={checkAnother}>
+                  <RotateCcw size={16} aria-hidden="true" />
+                  Check another
+                </button>
               )}
-              <div className="tool-head">
-                <h2 className="tool-title">Start a check</h2>
-                <p className="tool-sub">Pick what you were sent</p>
-              </div>
-
-              <div className="switch" role="tablist" aria-label="What do you want to check?">
-                {[
-                  ['image', 'Screenshot'],
-                  ['link', 'Link'],
-                ].map(([id, label]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    role="tab"
-                    aria-selected={mode === id}
-                    className="switch-btn"
-                    onClick={() => switchMode(id)}
-                  >
-                    {label}
-                  </button>
-                ))}
-                <span className={`switch-thumb${mode === 'link' ? ' is-right' : ''}`} aria-hidden="true" />
-              </div>
-
-              {mode === 'image' ? (
-                <ImageInput
-                  file={file}
-                  previewUrl={previewUrl}
-                  busy={busy}
-                  onFile={onFile}
-                  onClear={clear}
-                  onRetry={() => file && run(() => (online === false ? checkImageLocal(file, setProgress) : checkImage(file)))}
-                />
-              ) : (
-                <LinkInput value={link} busy={busy} onChange={setLink} onSubmit={onLink} />
-              )}
-
-              <p className="privacy">
-                <Lock size={14} aria-hidden="true" />
-                {online === false
-                  ? 'Nothing is uploaded or stored. Nothing is sent to your bank or the payer.'
-                  : 'Checked on the server and not stored. Nothing is sent to your bank or the payer.'}
-              </p>
-            </Reveal>
-          </div>
-        </section>
-
-        <section
-          id="result"
-          ref={resultRef}
-          className={`result-section${status === 'idle' ? ' is-empty' : ''}`}
-          aria-live="polite"
-          aria-busy={busy}
-          aria-label="Result"
-        >
-          {status !== 'idle' && (
-            <div className="wrap">
-              <div className="result-bar">
-                <h2 className="result-heading">{busy ? 'Checking' : 'Your result'}</h2>
-                {!busy && (
-                  <button type="button" className="btn btn-secondary" onClick={checkAnother}>
-                    <RotateCcw size={16} aria-hidden="true" />
-                    Check another
-                  </button>
-                )}
-              </div>
-              <div className="result-card">
-                {busy && <Loading mode={mode} progress={online === false ? progress : ''} />}
-                {status === 'error' && <ErrorState message={error} />}
-                {status === 'done' && showingResult && <Result result={result} previewUrl={previewUrl} />}
-              </div>
             </div>
-          )}
-        </section>
-
-        <HowItWorks />
-        <Checks />
-        <SpotFake />
-        <ScoreGuide />
-        <About />
-        <Faq />
-
-        <section className="cta" aria-labelledby="cta-title">
-          <Reveal className="wrap cta-inner">
-            <h2 id="cta-title">Someone just sent you a payment screenshot?</h2>
-            <p>Check it now, then open your bank app and look for the money.</p>
-            <a href="#check" className="btn btn-primary">
-              <ArrowUp size={18} aria-hidden="true" />
-              Go to the checker
-            </a>
-          </Reveal>
-        </section>
+            {status === 'idle' && <Idle mode={mode} />}
+            {busy && <Loading mode={mode} progress={online === false ? progress : ''} />}
+            {status === 'error' && <ErrorState message={error} />}
+            {status === 'done' && showingResult && <Result result={result} previewUrl={previewUrl} />}
+          </section>
+        </div>
       </main>
 
       <footer className="foot">
         <div className="wrap foot-inner">
-          <div>
-            <p className="foot-brand">
-              Receipt<span>check</span>
-            </p>
-            <p className="foot-note">
-              A student project made for learning. The result is an estimate, not a bank confirmation. The only
-              proof of payment is the money showing in your own account.
-            </p>
-          </div>
-          <p className="foot-small">
-            Not affiliated with NPCI, Google Pay, PhonePe, Paytm, BHIM or any bank. App names are used only to say
-            which receipts the checker reads.
-          </p>
+          <p>Academic project, built for study purposes. Not affiliated with NPCI, any bank or any UPI app.</p>
+          <p>The result is an estimate. The only proof of payment is the money in your own account.</p>
         </div>
       </footer>
+    </div>
+  )
+}
+
+function Idle({ mode }) {
+  const items =
+    mode === 'image'
+      ? ['A percentage for how likely the receipt is fake', 'What looks wrong and what checks out', 'Edited areas outlined on the screenshot']
+      : ['A percentage for how likely the link is a scam', 'Where the link really ends up', 'What the page asks you for']
+  return (
+    <div className="idle">
+      <span className="idle-icon" aria-hidden="true">
+        <FileSearch size={26} strokeWidth={1.75} />
+      </span>
+      <p className="idle-title">No result yet</p>
+      <p className="idle-text">
+        {mode === 'image'
+          ? 'Add a screenshot to start. The check takes 5 to 15 seconds.'
+          : 'Paste a link to start. The check takes a few seconds.'}
+      </p>
+      <ul className="idle-list">
+        {items.map((t) => (
+          <li key={t}>
+            <CircleCheck size={16} aria-hidden="true" />
+            {t}
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
